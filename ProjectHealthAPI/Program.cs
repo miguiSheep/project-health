@@ -1,5 +1,8 @@
+using Microsoft.EntityFrameworkCore;
+using ProjectHealthAPI.Data; // O la carpeta donde guardaste tu AppDbContext
 var builder = WebApplication.CreateBuilder(args);
-
+// Conectando Entity Framework con PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("ConexionPostgres")));
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
