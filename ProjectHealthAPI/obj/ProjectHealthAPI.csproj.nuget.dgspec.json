@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Migui\\Desktop\\Dev\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj": {}
+    "E:\\User\\Desktop\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj": {}
   },
   "projects": {
-    "D:\\Migui\\Desktop\\Dev\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj": {
+    "E:\\User\\Desktop\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Migui\\Desktop\\Dev\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj",
+        "projectUniqueName": "E:\\User\\Desktop\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj",
         "projectName": "ProjectHealthAPI",
-        "projectPath": "D:\\Migui\\Desktop\\Dev\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "D:\\Migui\\Desktop\\Dev\\project-health\\ProjectHealthAPI\\obj\\",
+        "projectPath": "E:\\User\\Desktop\\project-health\\ProjectHealthAPI\\ProjectHealthAPI.csproj",
+        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+        "outputPath": "E:\\User\\Desktop\\project-health\\ProjectHealthAPI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
