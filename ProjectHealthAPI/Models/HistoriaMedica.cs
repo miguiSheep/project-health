@@ -5,9 +5,13 @@ namespace ProjectHealthAPI.Models
     public class HistoriaMedica
     {
         public int Id { get; set; }
-        public String Paciente { get; set; } = string.Empty;
+        // La llave foránea (El número de cédula/ID que se guarda)
+        public int PacienteId { get; set; }
+        
+        // La Propiedad de Navegación (El cable por donde viaja el .Include)
+        public Paciente? Paciente { get; set; }
         public AntecedentesPersonales antecedentesPersonales { get; set; }
-        public String Framaco { get; set; } = string.Empty;
+        public String Farmaco { get; set; } = string.Empty;
         public String Dosificacion { get; set; } = string.Empty;
         public Boolean Antidepresivos { get; set; }
         public Boolean Ansioloiticos { get; set; }

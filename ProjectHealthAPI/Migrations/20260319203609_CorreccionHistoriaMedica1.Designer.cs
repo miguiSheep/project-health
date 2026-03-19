@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ProjectHealthAPI.Data;
@@ -11,9 +12,11 @@ using ProjectHealthAPI.Data;
 namespace ProjectHealthAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260319203609_CorreccionHistoriaMedica1")]
+    partial class CorreccionHistoriaMedica1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -171,7 +174,7 @@ namespace ProjectHealthAPI.Migrations
                     b.Property<int>("EstadoCliente")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Farmaco")
+                    b.Property<string>("Framaco")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -269,6 +272,7 @@ namespace ProjectHealthAPI.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Comprobante")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("EstadoPago")

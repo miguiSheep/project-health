@@ -9,6 +9,7 @@ namespace ProjectHealthAPI.Models
         public Genero Genero { get; set; }
         public EstadoCivil EstadoCivil { get; set; }
         public int Edad { get; set; }
+        public int Peso { get; set; }
         public EstadoCliente EstadoCliente { get; set; }
         public String Ocupacion { get; set; } = string.Empty;
         public String Telefono { get; set; } = string.Empty;

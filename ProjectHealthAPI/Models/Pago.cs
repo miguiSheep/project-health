@@ -12,6 +12,6 @@ namespace ProjectHealthAPI.Models
         public int? AlquilerId { get; set; }
         public Alquiler? Alquiler { get; set; }
         public int Referencia { get; set; }
-        public String Comprobante { get; set; } = string.Empty;
+        public String? Comprobante { get; set; } = string.Empty;
     }
 }
