@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectHealthAPI.Data;
 using ProjectHealthAPI.Models;
+using ProjectHealthAPI.DTOs;
 
 namespace ProjectHealthAPI.Controllers
 {
@@ -16,50 +17,130 @@ namespace ProjectHealthAPI.Controllers
             _context = context;
         }
 
-        // PUERTA 1: Obtener todas las citas (CON los datos del paciente)
+        // PUERTA 1: Obtener todas las Citas (GET) - BLINDADA Y APLANADA
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cita>>> GetCitas()
+        public async Task<ActionResult<IEnumerable<CitaResponseDTO>>> GetCitas()
         {
-            // El .Include() es la magia: trae la cita y "adjunta" al paciente dueño de ese ID
-            return await _context.Citas
-                                 .Include(c => c.Paciente)
-                                 .ToListAsync();
+            // 1. Buscamos las citas e INCLUIMOS al papá (Paciente)
+            var citas = await _context.Citas
+                                      .Include(c => c.Paciente) 
+                                      .ToListAsync();
+
+            // 2. TRADUCCIÓN MASIVA Y APLANAMIENTO
+            var respuesta = citas.Select(c => new CitaResponseDTO
+            {
+                Id = c.Id,
+                Fecha = c.Fecha,
+                HoraEntrada = c.HoraEntrada,
+                HoraSalida = c.HoraSalida,
+                EstadoServicio = (int)c.EstadoServicio,
+                
+                // 🪄 Sacamos los datos del padre para que Flutter no tenga que hacer otra consulta
+                PacienteId = c.PacienteId,
+                PacienteNombre = c.Paciente != null ? $"{c.Paciente.Nombre} {c.Paciente.Apellido}" : "Desconocido",
+                PacienteCedula = c.Paciente != null ? c.Paciente.Cedula : "N/A"
+            }).ToList();
+
+            return Ok(respuesta);
+        }
+        // PUERTA 2: Crear una nueva Cita (POST) - BLINDADA
+        [HttpPost]
+        public async Task<ActionResult<CitaResponseDTO>> PostCita(CitaCreateDTO citaDTO)
+        {
+            // 🛡️ VALIDACIÓN EXTRA: Verificamos que el paciente exista antes de crearle la cita
+            var paciente = await _context.Pacientes.FindAsync(citaDTO.PacienteId);
+            if (paciente == null)
+            {
+                return BadRequest("El paciente especificado no existe.");
+            }
+
+            // 1. TRADUCCIÓN (Mapeo)
+            var nuevaCita = new Cita
+            {
+                PacienteId = citaDTO.PacienteId,
+                Fecha = citaDTO.Fecha,
+                HoraEntrada = citaDTO.HoraEntrada,
+                HoraSalida = citaDTO.HoraSalida,
+                
+                // Forzamos el estado a 0 (Agendada) por seguridad
+                EstadoServicio = (EstadoServicio)0 
+            };
+
+            // 2. GUARDAR
+            _context.Citas.Add(nuevaCita);
+            await _context.SaveChangesAsync();
+
+            // 3. ARMAR LA RESPUESTA APLANADA
+            // Como ya buscamos al paciente arriba para validarlo, usamos sus datos aquí directamente
+            var respuesta = new CitaResponseDTO
+            {
+                Id = nuevaCita.Id,
+                Fecha = nuevaCita.Fecha,
+                HoraEntrada = nuevaCita.HoraEntrada,
+                HoraSalida = nuevaCita.HoraSalida,
+                EstadoServicio = (int)nuevaCita.EstadoServicio,
+                
+                // 🪄 APLANAMIENTO LISTO PARA FLUTTER
+                PacienteId = paciente.Id,
+                PacienteNombre = $"{paciente.Nombre} {paciente.Apellido}",
+                PacienteCedula = paciente.Cedula
+            };
+
+            return CreatedAtAction(nameof(GetCita), new { id = nuevaCita.Id }, respuesta);
         }
 
-        // PUERTA 2: Buscar una cita por ID (CON los datos del paciente)
+        // PUERTA 3: Buscar una Cita por ID (GET) - BLINDADA Y APLANADA
         [HttpGet("{id}")]
-        public async Task<ActionResult<Cita>> GetCita(int id)
+        public async Task<ActionResult<CitaResponseDTO>> GetCita(int id)
         {
+            // Buscamos la cita e incluimos los datos del padre
             var cita = await _context.Citas
                                      .Include(c => c.Paciente)
                                      .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (cita == null)
+            if (cita == null) return NotFound("Cita no encontrada.");
+
+            // TRADUCCIÓN INDIVIDUAL
+            var respuesta = new CitaResponseDTO
             {
-                return NotFound("Cita no encontrada.");
+                Id = cita.Id,
+                Fecha = cita.Fecha,
+                HoraEntrada = cita.HoraEntrada,
+                HoraSalida = cita.HoraSalida,
+                EstadoServicio = (int)cita.EstadoServicio,
+                
+                PacienteId = cita.PacienteId,
+                PacienteNombre = cita.Paciente != null ? $"{cita.Paciente.Nombre} {cita.Paciente.Apellido}" : "Desconocido",
+                PacienteCedula = cita.Paciente != null ? cita.Paciente.Cedula : "N/A"
+            };
+
+            return Ok(respuesta);
+        }
+
+        // PUERTA 4: Actualizar Cita (PUT) - BLINDADA
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutCita(int id, CitaCreateDTO citaDTO)
+        {
+            // 1. Buscamos la cita original
+            var citaBd = await _context.Citas.FindAsync(id);
+            if (citaBd == null) return NotFound("Cita no encontrada.");
+
+            // 🛡️ VALIDACIÓN EXTRA: Si el usuario intenta cambiar la cita a otro paciente, verificamos que el nuevo exista
+            if (citaBd.PacienteId != citaDTO.PacienteId)
+            {
+                var pacienteExiste = await _context.Pacientes.AnyAsync(p => p.Id == citaDTO.PacienteId);
+                if (!pacienteExiste) return BadRequest("El nuevo paciente especificado no existe.");
             }
 
-            return cita;
-        }
+            // 2. TRADUCCIÓN (Sobreescritura segura)
+            citaBd.PacienteId = citaDTO.PacienteId;
+            citaBd.Fecha = citaDTO.Fecha;
+            citaBd.HoraEntrada = citaDTO.HoraEntrada;
+            citaBd.HoraSalida = citaDTO.HoraSalida;
+            
+            // Fíjate que NO tocamos citaBd.EstadoServicio. Eso requeriría otro endpoint o permisos especiales.
 
-        // PUERTA 3: Crear una nueva cita
-        [HttpPost]
-        public async Task<ActionResult<Cita>> PostCita(Cita cita)
-        {
-            // Al crear, solo necesitas enviar el PacienteId (ej: "PacienteId": 1) en el JSON
-            _context.Citas.Add(cita);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetCita), new { id = cita.Id }, cita);
-        }
-
-        // PUERTA 4: Actualizar Cita
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCita(int id, Cita cita)
-        {
-            if (id != cita.Id) return BadRequest();
-
-            _context.Entry(cita).State = EntityState.Modified;
+            // 3. Guardar cambios
             await _context.SaveChangesAsync();
 
             return NoContent();

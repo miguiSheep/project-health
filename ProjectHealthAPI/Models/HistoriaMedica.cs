@@ -14,7 +14,7 @@ namespace ProjectHealthAPI.Models
         public String Farmaco { get; set; } = string.Empty;
         public String Dosificacion { get; set; } = string.Empty;
         public Boolean Antidepresivos { get; set; }
-        public Boolean Ansioloiticos { get; set; }
+        public Boolean Ansioliticos { get; set; }
         public Fumador Fumador { get; set; }
         public int EdadInicio { get; set; } 
         public ConsumoAlcohol ConsumoAlcohol { get; set; }

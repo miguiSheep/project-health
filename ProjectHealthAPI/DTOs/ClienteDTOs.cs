@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 namespace ProjectHealthAPI.DTOs
 {
-    // 🛡️ DTO DE ENTRADA: El escudo para cuando creamos un paciente nuevo
-    public class PacienteCreateDTO
+    // 🛡️ DTO DE ENTRADA: El escudo para cuando creamos un Cliente nuevo
+    public class ClienteCreateDTO
     {
         [Required(ErrorMessage = "El nombre es obligatorio.")]
         [StringLength(50, ErrorMessage = "El nombre no puede tener más de 50 letras.")]
@@ -14,7 +14,8 @@ namespace ProjectHealthAPI.DTOs
         // 🛡️ REGLA FLEXIBLE PARA CÉDULAS/PASAPORTES
         // Acepta V- o E- seguido de 6 a 8 números, O acepta letras y números para pasaportes extranjeros.
         [Required(ErrorMessage = "El documento de identidad es obligatorio.")]
-        [RegularExpression(@"^([VE]-[0-9]{6,9}|P-[a-zA-Z0-9]{4,14})$", ErrorMessage = "Formato inválido. Use V/E-12345678 o P-NumeroPasaporte.")]
+        // Exige V, E, J, G con 6 a 9 números, O exige P- seguido de letras/números para pasaportes
+        [RegularExpression(@"^([VEJG]-[0-9]{6,9}|P-[a-zA-Z0-9]{4,14})$", ErrorMessage = "Formato inválido. Use V/E/J/G-12345678 o P-NumeroPasaporte.")]
         public string Cedula { get; set; } = string.Empty;
 
         [Range(0, 120, ErrorMessage = "La edad debe estar entre 0 y 120 años.")]
@@ -22,7 +23,6 @@ namespace ProjectHealthAPI.DTOs
 
         public int Genero { get; set; }
         public int EstadoCivil { get; set; }
-        public int Peso { get; set; }
         public string Ocupacion { get; set; } = string.Empty;
 
         // 🛡️ REGLA FLEXIBLE PARA TELÉFONOS
@@ -35,12 +35,13 @@ namespace ProjectHealthAPI.DTOs
     }
 
     // 📦 DTO DE SALIDA: Lo que le enviamos a Flutter para que lo lea
-    public class PacienteResponseDTO
+    public class ClienteResponseDTO
     {
         public int Id { get; set; }
         public string NombreCompleto { get; set; } = string.Empty;
         public string Cedula { get; set; } = string.Empty;
         public string Telefono { get; set; } = string.Empty;
+
         public int EstadoCliente { get; set; }
     }
 }
