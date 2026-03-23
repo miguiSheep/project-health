@@ -22,9 +22,9 @@ namespace ProjectHealthAPI.Controllers
         {
             var pagos = await _context.Pagos
                                       .Include(p => p.Cita)
-                                          .ThenInclude(c => c.Paciente)
+                                          .ThenInclude(c => c!.Paciente)
                                       .Include(p => p.Alquiler)
-                                          .ThenInclude(a => a.Cliente)
+                                          .ThenInclude(a => a!.Cliente)
                                       .ToListAsync();
 
             var respuesta = pagos.Select(p => new PagoResponseDTO
@@ -89,9 +89,9 @@ namespace ProjectHealthAPI.Controllers
         {
             var p = await _context.Pagos
                                   .Include(x => x.Cita)
-                                      .ThenInclude(c => c.Paciente)
+                                      .ThenInclude(c => c!.Paciente)
                                   .Include(x => x.Alquiler)
-                                      .ThenInclude(a => a.Cliente)
+                                      .ThenInclude(a => a!.Cliente)
                                   .FirstOrDefaultAsync(x => x.Id == id);
 
             if (p == null) return NotFound("No existe un pago con ese ID.");
