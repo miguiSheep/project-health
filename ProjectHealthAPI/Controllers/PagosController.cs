@@ -2,121 +2,152 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectHealthAPI.Data;
 using ProjectHealthAPI.Models;
+using ProjectHealthAPI.DTOs;
 
 namespace ProjectHealthAPI.Controllers
 {
-    // 📍 ENRUTAMIENTO: Define que la URL para llegar aquí será "api/Pagos"
     [Route("api/[controller]")]
     [ApiController] 
     public class PagosController : ControllerBase
     {
-        // Variable privada que guardará la conexión a la base de datos
         private readonly AppDbContext _context;
 
-        // 💉 INYECCIÓN DE DEPENDENCIAS: El constructor recibe la conexión y la guarda
         public PagosController(AppDbContext context)
         {
             _context = context;
         }
 
-        // ====================================================================
-        // 🚪 PUERTA 1: LEER TODOS LOS PAGOS (GET)
-        // ====================================================================
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Pago>>> GetPagos()
+        public async Task<ActionResult<IEnumerable<PagoResponseDTO>>> GetPagos()
         {
-            // Va a la tabla Pagos.
-            // .Include(p => p.Cita) -> Intenta adjuntar los datos de la cita (si existe).
-            // .Include(p => p.Alquiler) -> Intenta adjuntar los datos del alquiler (si existe).
-            return await _context.Pagos
-                                 .Include(p => p.Cita)
-                                 .Include(p => p.Alquiler)
-                                 .ToListAsync();
+            var pagos = await _context.Pagos
+                                      .Include(p => p.Cita)
+                                          .ThenInclude(c => c.Paciente)
+                                      .Include(p => p.Alquiler)
+                                          .ThenInclude(a => a.Cliente)
+                                      .ToListAsync();
+
+            var respuesta = pagos.Select(p => new PagoResponseDTO
+            {
+                Id = p.Id,
+                Monto = p.Monto,
+                Fecha = p.Fecha, 
+                TipoServicio = (int)p.TipoServicio,
+                TipoPago = (int)p.TipoPago,
+                EstadoPago = (int)p.EstadoPago,
+                Referencia = p.Referencia,
+                Comprobante = p.Comprobante,
+                
+                ServicioId = p.TipoServicio == TipoServicio.Cita ? p.CitaId ?? 0 : p.AlquilerId ?? 0,
+                
+                ResponsableNombre = p.TipoServicio == TipoServicio.Cita 
+                    ? (p.Cita?.Paciente != null ? $"{p.Cita.Paciente.Nombre} {p.Cita.Paciente.Apellido}" : "Desconocido") 
+                    : (p.Alquiler?.Cliente != null ? $"{p.Alquiler.Cliente.Nombre} {p.Alquiler.Cliente.Apellido}" : "Desconocido"),
+                    
+                ResponsableDocumento = p.TipoServicio == TipoServicio.Cita 
+                    ? (p.Cita?.Paciente != null ? p.Cita.Paciente.Cedula : "N/A") 
+                    : (p.Alquiler?.Cliente != null ? p.Alquiler.Cliente.Cedula : "N/A")
+            }).ToList();
+
+            return Ok(respuesta);
         }
 
-        // ====================================================================
-        // 🚪 PUERTA 2: CREAR UN NUEVO PAGO (POST)
-        // ====================================================================
         [HttpPost]
-        public async Task<ActionResult<Pago>> PostPago(Pago pago)
+        public async Task<ActionResult<PagoResponseDTO>> PostPago(PagoCreateDTO pagoDTO)
         {
-            // 🛡️ REGLA DE NEGOCIO 1: Validación de Citas
-            // "Si en el Enum marcaste 'Cita' (valor 1), pero el CitaId viene nulo (vacío)..."
-            if (pago.TipoServicio == TipoServicio.Cita && pago.CitaId == null)
+            if (pagoDTO.TipoServicio == (int)TipoServicio.Cita && pagoDTO.CitaId == null)
             {
-                // BadRequest devuelve un Error 400 (Culpa del usuario por mandar datos incompletos)
                 return BadRequest("Error: Si el pago es por una Cita, debes proporcionar el CitaId.");
             }
 
-            // 🛡️ REGLA DE NEGOCIO 2: Validación de Alquileres
-            // "Si en el Enum marcaste 'Alquiler' (valor 0), pero el AlquilerId viene nulo..."
-            if (pago.TipoServicio == TipoServicio.Alquiler && pago.AlquilerId == null)
+            if (pagoDTO.TipoServicio == (int)TipoServicio.Alquiler && pagoDTO.AlquilerId == null)
             {
                 return BadRequest("Error: Si el pago es por un Alquiler, debes proporcionar el AlquilerId.");
             }
 
-            // Si pasa la policía, Entity Framework prepara el registro
-            _context.Pagos.Add(pago);
-            // Salva los cambios físicamente en PostgreSQL
-            await _context.SaveChangesAsync();
-
-            // Devuelve un código 200 OK y muestra cómo quedó guardado el pago
-            return Ok(pago);
-        }
-
-        // ====================================================================
-        // 🚪 PUERTA 3: LEER UN PAGO ESPECÍFICO (GET POR ID)
-        // ====================================================================
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Pago>> GetPago(int id)
-        {
-            // FirstOrDefaultAsync: Busca el primer pago cuyo Id coincida con el número de la URL
-            var pago = await _context.Pagos
-                                     .Include(p => p.Cita)
-                                        .ThenInclude(c => c.Paciente)
-                                     .Include(p => p.Alquiler)
-                                        .ThenInclude(c => c.Cliente)
-                                     .FirstOrDefaultAsync(p => p.Id == id);
-
-            // Si no consigue nada, devuelve Error 404 (No Encontrado)
-            if (pago == null) 
+            var nuevoPago = new Pago
             {
-                return NotFound("No existe un pago con ese ID.");
-            }
+                Monto = pagoDTO.Monto,
+                Fecha = pagoDTO.Fecha, 
+                TipoServicio = (TipoServicio)pagoDTO.TipoServicio,
+                TipoPago = (TipoPago)pagoDTO.TipoPago,
+                EstadoPago = (EstadoPago)pagoDTO.EstadoPago,
+                Referencia = pagoDTO.Referencia,
+                Comprobante = pagoDTO.Comprobante,
+                CitaId = pagoDTO.CitaId,
+                AlquilerId = pagoDTO.AlquilerId
+            };
 
-            return pago;
-        }
-
-        // ====================================================================
-        // 🚪 PUERTA 4: ACTUALIZAR UN PAGO (PUT)
-        // ====================================================================
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutPago(int id, Pago pago)
-        {
-            // Medida de seguridad: Evita que alguien intente editar el pago 5 usando la URL del pago 2
-            if (id != pago.Id) return BadRequest();
-
-            // Le avisa al motor que este registro fue modificado y debe sobreescribirse
-            _context.Entry(pago).State = EntityState.Modified;
+            _context.Pagos.Add(nuevoPago);
             await _context.SaveChangesAsync();
 
-            // Devuelve 204 No Content (Éxito, pero no hay texto que mostrar)
+            return CreatedAtAction(nameof(GetPago), new { id = nuevoPago.Id }, null);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PagoResponseDTO>> GetPago(int id)
+        {
+            var p = await _context.Pagos
+                                  .Include(x => x.Cita)
+                                      .ThenInclude(c => c.Paciente)
+                                  .Include(x => x.Alquiler)
+                                      .ThenInclude(a => a.Cliente)
+                                  .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (p == null) return NotFound("No existe un pago con ese ID.");
+
+            var respuesta = new PagoResponseDTO
+            {
+                Id = p.Id,
+                Monto = p.Monto,
+                Fecha = p.Fecha,
+                TipoServicio = (int)p.TipoServicio,
+                TipoPago = (int)p.TipoPago,
+                EstadoPago = (int)p.EstadoPago,
+                Referencia = p.Referencia,
+                Comprobante = p.Comprobante,
+                
+                ServicioId = p.TipoServicio == TipoServicio.Cita ? p.CitaId ?? 0 : p.AlquilerId ?? 0,
+                
+                ResponsableNombre = p.TipoServicio == TipoServicio.Cita 
+                    ? (p.Cita?.Paciente != null ? $"{p.Cita.Paciente.Nombre} {p.Cita.Paciente.Apellido}" : "Desconocido") 
+                    : (p.Alquiler?.Cliente != null ? $"{p.Alquiler.Cliente.Nombre} {p.Alquiler.Cliente.Apellido}" : "Desconocido"),
+                    
+                ResponsableDocumento = p.TipoServicio == TipoServicio.Cita 
+                    ? (p.Cita?.Paciente != null ? p.Cita.Paciente.Cedula : "N/A") 
+                    : (p.Alquiler?.Cliente != null ? p.Alquiler.Cliente.Cedula : "N/A")
+            };
+
+            return Ok(respuesta);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutPago(int id, PagoCreateDTO pagoDTO)
+        {
+            var pagoBd = await _context.Pagos.FindAsync(id);
+            if (pagoBd == null) return NotFound();
+
+            pagoBd.Monto = pagoDTO.Monto;
+            pagoBd.Fecha = pagoDTO.Fecha;
+            pagoBd.TipoServicio = (TipoServicio)pagoDTO.TipoServicio;
+            pagoBd.TipoPago = (TipoPago)pagoDTO.TipoPago;
+            pagoBd.EstadoPago = (EstadoPago)pagoDTO.EstadoPago;
+            pagoBd.Referencia = pagoDTO.Referencia;
+            pagoBd.Comprobante = pagoDTO.Comprobante;
+            pagoBd.CitaId = pagoDTO.CitaId;
+            pagoBd.AlquilerId = pagoDTO.AlquilerId;
+
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        // ====================================================================
-        // 🚪 PUERTA 5: ELIMINAR UN PAGO (DELETE)
-        // ====================================================================
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePago(int id)
         {
-            // Primero busca si el pago existe
             var pago = await _context.Pagos.FindAsync(id);
             if (pago == null) return NotFound();
 
-            // Lo marca para eliminación
             _context.Pagos.Remove(pago);
-            // Ejecuta la orden en la base de datos
             await _context.SaveChangesAsync();
 
             return NoContent();
